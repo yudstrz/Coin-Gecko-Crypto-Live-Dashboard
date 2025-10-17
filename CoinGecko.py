@@ -207,5 +207,5 @@ with col2:
     for i in range(interval):
         progress.progress((i + 1) / interval)
         time.sleep(1)
-        st.rerun()
+        st.experimental_rerun(
 
