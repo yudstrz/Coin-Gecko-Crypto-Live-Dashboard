@@ -45,7 +45,7 @@ def ping_api() -> float:
     """Cek konektivitas ke API CoinGecko"""
     start = time.time()
     try:
-        r = requests.get("https://api.coingecko.com/api/v3/ping", timeout=5)
+        r = requests.get("https://api.coingecko.com/api/v3/ping", timeout=30)
         r.raise_for_status()
         return time.time() - start
     except requests.RequestException:
