@@ -196,16 +196,20 @@ if show_chart:
         st.plotly_chart(fig, use_container_width=True)
 
 # ---------------------------------------
-# AUTO REFRESH (PROGRESS)
+# AUTO REFRESH (Fallback Aman)
 # ---------------------------------------
 st.divider()
-col1, col2 = st.columns([3, 1])
-with col1:
-    st.info(f"🔄 Dashboard akan memperbarui otomatis setiap {interval} detik.")
-with col2:
-    progress = st.progress(0)
-    for i in range(interval):
-        progress.progress((i + 1) / interval)
-        time.sleep(1)
-        st.experimental_rerun()
+st.info(f"🔄 Dashboard akan memperbarui otomatis setiap {interval} detik.")
+
+progress = st.progress(0)
+for i in range(interval):
+    progress.progress((i + 1) / interval)
+    time.sleep(1)
+
+# Fallback untuk versi lama dan baru
+try:
+    st.experimental_rerun()  # Akan dipakai jika masih ada di versi lama
+except AttributeError:
+    st.rerun()  # Dipakai di Streamlit versi baru
+
 
