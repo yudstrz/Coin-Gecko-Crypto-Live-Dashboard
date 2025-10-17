@@ -1,4 +1,3 @@
-# app.py
 import time
 import requests
 import pandas as pd
@@ -208,4 +207,5 @@ with col2:
     for i in range(interval):
         progress.progress((i + 1) / interval)
         time.sleep(1)
-    st.experimental_rerun()
+        
+st.button("♻️ Refresh Sekarang", on_click=st.rerun)
