@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import List
 
 # ---------------------------------------
-# ⚙️ CONFIGURASI DASHBOARD
+# CONFIGURASI DASHBOARD
 # ---------------------------------------
 st.set_page_config(
     page_title="💰 Crypto Live Dashboard | CoinGecko",
@@ -21,13 +21,13 @@ st.title("💰 Crypto Live Dashboard")
 st.caption("📊 Real-time data dari [CoinGecko API](https://www.coingecko.com/en/api) — update otomatis setiap interval tertentu.")
 
 # ---------------------------------------
-# 🧩 SIDEBAR PENGATURAN
+# SIDEBAR PENGATURAN
 # ---------------------------------------
 with st.sidebar:
     st.header("⚙️ Pengaturan")
     coins_input = st.text_input(
         "Masukkan Coin IDs (pisahkan dengan koma)", 
-        "bitcoin,ethereum,solana,cardano"
+        "bitcoin,ethereum,solana"
     )
     coins = [c.strip().lower() for c in coins_input.split(",") if c.strip()]
     vs_currency = st.selectbox("Mata Uang", ["usd", "idr", "eur", "btc"], index=0)
@@ -81,17 +81,16 @@ def fetch_market_chart(coin_id: str, vs_currency: str, days: int = 1) -> pd.Data
         return pd.DataFrame(columns=["timestamp", "price"])
 
 # ---------------------------------------
-# 🧮 HELPER STYLING
+# HELPER STYLING
 # ---------------------------------------
 def color_delta(val):
-    """Kembalikan CSS style warna hijau/merah"""
     if pd.isna(val):
         return ""
     color = "green" if val > 0 else "red"
     return f"color: {color}; font-weight: bold;"
 
 # ---------------------------------------
-# 🛰️ STATUS API
+# STATUS API
 # ---------------------------------------
 ping_time = ping_api()
 if ping_time < 0:
@@ -100,7 +99,7 @@ else:
     st.success(f"✅ API aktif ({ping_time:.2f}s)")
 
 # ---------------------------------------
-# 📈 AMBIL DATA PASAR
+# AMBIL DATA PASAR
 # ---------------------------------------
 try:
     df = fetch_market_data(vs_currency, coins)
@@ -113,7 +112,7 @@ if df.empty:
     st.stop()
 
 # ---------------------------------------
-# 📋 PILIH KOLOM
+# PILIH KOLOM
 # ---------------------------------------
 columns_display = [
     "symbol", "name", "current_price", 
@@ -145,7 +144,7 @@ df_display.rename(columns={
 }, inplace=True)
 
 # ---------------------------------------
-# 🧾 RINGKASAN METRIC CARD
+# RINGKASAN METRIC CARD
 # ---------------------------------------
 st.subheader("📊 Ringkasan Harga")
 cols = st.columns(min(len(df), 4))
@@ -159,7 +158,7 @@ for i, (_, r) in enumerate(df.iterrows()):
         )
 
 # ---------------------------------------
-# 🧠 TABEL DETAIL
+# TABEL DETAIL
 # ---------------------------------------
 st.markdown("### 📋 Detail Pasar")
 st.dataframe(
@@ -180,7 +179,7 @@ st.dataframe(
 )
 
 # ---------------------------------------
-# 📉 GRAFIK HARGA
+# GRAFIK HARGA
 # ---------------------------------------
 if show_chart:
     st.markdown("### 📈 Grafik Harga")
@@ -198,7 +197,7 @@ if show_chart:
         st.plotly_chart(fig, use_container_width=True)
 
 # ---------------------------------------
-# 🔁 AUTO REFRESH (PROGRESS)
+# AUTO REFRESH (PROGRESS)
 # ---------------------------------------
 st.divider()
 col1, col2 = st.columns([3, 1])
