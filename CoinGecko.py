@@ -5,11 +5,11 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List
 
-# ------------------------------
-# Konfigurasi Aplikasi
-# ------------------------------
+# ---------------------------------------
+# ⚙️ CONFIGURASI DASHBOARD
+# ---------------------------------------
 st.set_page_config(
     page_title="💰 Crypto Live Dashboard | CoinGecko",
     page_icon="💹",
@@ -17,32 +17,33 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-st.title("💰 **Crypto Live Dashboard**")
-st.caption("Data real-time dari [CoinGecko API](https://www.coingecko.com/en/api) — update otomatis setiap interval yang ditentukan.")
+st.title("💰 Crypto Live Dashboard")
+st.caption("📊 Real-time data dari [CoinGecko API](https://www.coingecko.com/en/api) — update otomatis setiap interval tertentu.")
 
-# ------------------------------
-# Sidebar - Pengaturan
-# ------------------------------
+# ---------------------------------------
+# 🧩 SIDEBAR PENGATURAN
+# ---------------------------------------
 with st.sidebar:
     st.header("⚙️ Pengaturan")
-    coin_input = st.text_input("Masukkan Coin IDs (pisahkan dengan koma)", "bitcoin,ethereum,solana,cardano")
-    coins = [c.strip().lower() for c in coin_input.split(",") if c.strip()]
-
+    coins_input = st.text_input(
+        "Masukkan Coin IDs (pisahkan dengan koma)", 
+        "bitcoin,ethereum,solana,cardano"
+    )
+    coins = [c.strip().lower() for c in coins_input.split(",") if c.strip()]
     vs_currency = st.selectbox("Mata Uang", ["usd", "idr", "eur", "btc"], index=0)
     interval = st.slider("Interval Update (detik)", 20, 120, 45, step=5)
-
-    show_chart = st.checkbox("Tampilkan grafik harga 24 jam", True)
-    chart_days = st.selectbox("Rentang Waktu Grafik (hari)", [1, 7, 14, 30], index=0)
+    show_chart = st.checkbox("Tampilkan grafik harga", True)
+    chart_days = st.selectbox("Rentang waktu grafik (hari)", [1, 7, 14, 30], index=0)
 
     st.divider()
-    st.info("💡 Tips: Gunakan ID Coin sesuai CoinGecko, contoh: `bitcoin`, `ethereum`, `dogecoin`.")
+    st.info("💡 Gunakan Coin ID sesuai CoinGecko, contoh: `bitcoin`, `ethereum`, `dogecoin`.")
 
-# ------------------------------
-# Fungsi Utilitas
-# ------------------------------
+# ---------------------------------------
+# ⚙️ UTILITAS
+# ---------------------------------------
 @st.cache_data(ttl=60)
 def ping_api() -> float:
-    """Ping CoinGecko API untuk mengukur respon"""
+    """Cek konektivitas ke API CoinGecko"""
     start = time.time()
     try:
         r = requests.get("https://api.coingecko.com/api/v3/ping", timeout=5)
@@ -52,18 +53,21 @@ def ping_api() -> float:
         return -1
 
 @st.cache_data(ttl=30)
-def fetch_market_data(vs_currency: str, coin_list: List[str]) -> pd.DataFrame:
-    """Ambil data pasar dari CoinGecko (lebih lengkap daripada simple/price)"""
+def fetch_market_data(vs_currency: str, coins: List[str]) -> pd.DataFrame:
+    """Ambil data pasar koin"""
     url = "https://api.coingecko.com/api/v3/coins/markets"
-    params = {"vs_currency": vs_currency, "ids": ",".join(coin_list), "price_change_percentage": "1h,24h,7d"}
+    params = {
+        "vs_currency": vs_currency,
+        "ids": ",".join(coins),
+        "price_change_percentage": "1h,24h,7d",
+    }
     r = requests.get(url, params=params, timeout=10)
     r.raise_for_status()
-    data = r.json()
-    return pd.DataFrame(data)
+    return pd.DataFrame(r.json())
 
 @st.cache_data(ttl=120)
 def fetch_market_chart(coin_id: str, vs_currency: str, days: int = 1) -> pd.DataFrame:
-    """Ambil data historis harga untuk sparkline/chart"""
+    """Ambil data historis harga untuk grafik"""
     url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart"
     params = {"vs_currency": vs_currency, "days": days}
     try:
@@ -76,42 +80,50 @@ def fetch_market_chart(coin_id: str, vs_currency: str, days: int = 1) -> pd.Data
     except Exception:
         return pd.DataFrame(columns=["timestamp", "price"])
 
-def color_delta(v):
-    """Warna untuk perubahan harga"""
-    if v is None or pd.isna(v):
-        return "black"
-    return "green" if v > 0 else "red"
+# ---------------------------------------
+# 🧮 HELPER STYLING
+# ---------------------------------------
+def color_delta(val):
+    """Kembalikan CSS style warna hijau/merah"""
+    if pd.isna(val):
+        return ""
+    color = "green" if val > 0 else "red"
+    return f"color: {color}; font-weight: bold;"
 
-# ------------------------------
-# 🛰️ Status Koneksi API
-# ------------------------------
+# ---------------------------------------
+# 🛰️ STATUS API
+# ---------------------------------------
 ping_time = ping_api()
 if ping_time < 0:
-    st.error("🚨 Gagal terhubung ke API CoinGecko.")
+    st.error("🚨 Tidak bisa terhubung ke CoinGecko API.")
 else:
     st.success(f"✅ API aktif ({ping_time:.2f}s)")
 
-# ------------------------------
-# Ambil Data
-# ------------------------------
+# ---------------------------------------
+# 📈 AMBIL DATA PASAR
+# ---------------------------------------
 try:
     df = fetch_market_data(vs_currency, coins)
 except Exception as e:
-    st.error(f"Gagal mengambil data dari CoinGecko: {e}")
+    st.error(f"Gagal mengambil data dari API: {e}")
     st.stop()
 
 if df.empty:
-    st.warning("Tidak ada data ditemukan. Periksa ID coin atau jaringan internet.")
+    st.warning("⚠️ Tidak ada data ditemukan. Periksa ID coin dan koneksi internet.")
     st.stop()
 
-# ------------------------------
-# Kolom yang Ditampilkan
-# ------------------------------
+# ---------------------------------------
+# 📋 PILIH KOLOM
+# ---------------------------------------
 columns_display = [
-    "symbol", "name", "current_price", "price_change_percentage_1h_in_currency",
-    "price_change_percentage_24h_in_currency", "price_change_percentage_7d_in_currency",
-    "high_24h", "low_24h", "ath", "market_cap", "total_volume",
-    "market_cap_rank", "fully_diluted_valuation", "last_updated"
+    "symbol", "name", "current_price", 
+    "price_change_percentage_1h_in_currency",
+    "price_change_percentage_24h_in_currency",
+    "price_change_percentage_7d_in_currency",
+    "high_24h", "low_24h", "ath",
+    "market_cap", "total_volume",
+    "market_cap_rank", "fully_diluted_valuation",
+    "last_updated"
 ]
 
 df_display = df[columns_display].copy()
@@ -132,11 +144,10 @@ df_display.rename(columns={
     "last_updated": "Last Update"
 }, inplace=True)
 
-# ------------------------------
-# Tampilan Utama - Kartu Ringkas
-# ------------------------------
-st.subheader("📊 Ringkasan Harga Kripto")
-
+# ---------------------------------------
+# 🧾 RINGKASAN METRIC CARD
+# ---------------------------------------
+st.subheader("📊 Ringkasan Harga")
 cols = st.columns(min(len(df), 4))
 for i, (_, r) in enumerate(df.iterrows()):
     with cols[i % len(cols)]:
@@ -144,12 +155,12 @@ for i, (_, r) in enumerate(df.iterrows()):
         st.metric(
             label=f"{r['name']} ({r['symbol'].upper()})",
             value=f"{r['current_price']:,} {vs_currency.upper()}",
-            delta=f"{delta_24h:.2f}%" if pd.notna(delta_24h) else "—"
+            delta=f"{delta_24h:.2f}%" if pd.notna(delta_24h) else "—",
         )
 
-# ------------------------------
-# Tabel Data Detail
-# ------------------------------
+# ---------------------------------------
+# 🧠 TABEL DETAIL
+# ---------------------------------------
 st.markdown("### 📋 Detail Pasar")
 st.dataframe(
     df_display.style.format({
@@ -165,26 +176,30 @@ st.dataframe(
         "FDV": "{:,.0f}",
     }).applymap(color_delta, subset=["1H %", "24H %", "7D %"]),
     use_container_width=True,
-    height=500
+    height=520,
 )
 
-# ------------------------------
-# Grafik Sparkline per Coin
-# ------------------------------
+# ---------------------------------------
+# 📉 GRAFIK HARGA
+# ---------------------------------------
 if show_chart:
-    st.markdown("### 📈 Grafik Harga 24 Jam Terakhir")
+    st.markdown("### 📈 Grafik Harga")
     for coin in coins:
-        mdf = fetch_market_chart(coin, vs_currency, days=chart_days)
-        if mdf.empty:
-            st.warning(f"⚠️ Tidak ada data grafik untuk {coin}.")
+        data = fetch_market_chart(coin, vs_currency, chart_days)
+        if data.empty:
+            st.warning(f"Tidak ada data grafik untuk {coin}.")
             continue
-        fig = px.line(mdf, x="timestamp", y="price", title=f"{coin.upper()} ({vs_currency.upper()})", height=300)
+        fig = px.line(
+            data, x="timestamp", y="price",
+            title=f"{coin.upper()} ({vs_currency.upper()}) - {chart_days} Hari",
+            height=300
+        )
         fig.update_layout(margin=dict(l=20, r=20, t=40, b=10))
         st.plotly_chart(fig, use_container_width=True)
 
-# ------------------------------
-# Auto Refresh Progress
-# ------------------------------
+# ---------------------------------------
+# 🔁 AUTO REFRESH (PROGRESS)
+# ---------------------------------------
 st.divider()
 col1, col2 = st.columns([3, 1])
 with col1:
